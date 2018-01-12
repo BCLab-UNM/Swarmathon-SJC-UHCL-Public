@@ -1,4 +1,5 @@
 #include "DropOffController.h"
+#include <ros/ros.h>
 
 DropOffController::DropOffController() {
 
@@ -21,35 +22,90 @@ DropOffController::DropOffController() {
 
   isPrecisionDriving = false;
   startWaypoint = false;
+  dropoffTimeStart = -1;
   timerTimeElapsed = -1;
-
 }
 
 DropOffController::~DropOffController() {
 
 }
 
-Result DropOffController::DoWork() {
+// DoWork does following:
+// When rover successfully picks up a cube, DropOffController comes into play.
+// First DropOffController calculates distance from rover's current location to homebase then set goal location to homebase.
+// Rover goes to homebase, if rover doesn't see collection zone, it will do spin search spirally from current location.
+// If rover still doesn't see homebase for 1.5min, DropOffController is reset and control returns to SearchController (via LogicControler, of course).
+// If rover sees homebase, it dynamically calculates how many center tags on the left and right w.r.t camera.
+// If rover see only center tags on 1 side (left or right), then rover rotates towards the side that has tags until it sees tags on both sides.
+// When rover sees tags on both sides, it goes straight into collection zone for 3 secs, drops off the cube, and goes back for 4 secs.
+// DropOffController then exits and rover then resumes normal search.
+// If for some reason, when the 3secs timer for going straight into center hasn't yet started and rover already saw center tag(s)
+// but then doesn't see anymore, it will go straight for 10secs until it sees center tags then continues the process.
+// If it still doesn't see tags, DropOffController resets and rover resumes normal search.
 
+// Please feel free to tune numerical numbers for better performance.
+Result DropOffController::DoWork() {
+  ROS_INFO_STREAM("DropOffController DoWork=" << current_time);
   cout << "8" << endl;
 
   int count = countLeft + countRight;
 
-  if(timerTimeElapsed > -1) {
-
-    long int elapsed = current_time - returnTimer;
-    timerTimeElapsed = elapsed/1e3; // Convert from milliseconds to seconds
+  // ======== BEGIN: Logic to make rover give up after 1.5min unsuccessful spin search ============
+  if (centerSeen && !lostCenter) { // We've found center. Stop time counting, don't drop off
+    ROS_INFO_STREAM_THROTTLE(3, "We found the center. Stop 2 mins time counting. Set startSpinSearchTimer = false..");
+    startSpinSearchTimer = false;
+    spinSearchStartTime = current_time;
   }
+
+
+  if (circularCenterSearching && !centerSeen && !startSpinSearchTimer) { // Start time counting when we start do spin search
+    ROS_INFO_STREAM("Starting Spin Search Time Counting for 2mins...");
+    startSpinSearchTimer = true;
+    spinSearchStartTime = current_time;
+  }
+
+
+  if (startSpinSearchTimer) { // Check the time elapsed. If >=2mins, just drop off the cube and resume normal search
+    long int elapsed = current_time - spinSearchStartTime;
+    float spinSearchTimeElapsed =  elapsed/1e3;
+    if (spinSearchTimeElapsed >= 90) {
+      ROS_INFO_STREAM("2mins has passed without seeing center from first spin search. Set startSpinSearchTimer = false. Drop off the cube. Resume normal search..");
+      // Reset everything
+      startSpinSearchTimer = false;
+
+      isPrecisionDriving = false;
+
+      result.type = behavior; // By setting this, rover will resume searching (SearchController becomes active)
+      result.b = nextProcess;
+      result.reset = true;
+
+      result.fingerAngle = M_PI_2; //open fingers
+      result.wristAngle = 0; //raise wrist
+
+      return result;
+
+    }
+    // else just do everything in normal
+  }
+  // ======== END: Logic to make rover give up after 2mins unsuccessful spin search ============
 
   //if we are in the routine for exiting the circle once we have dropped a block off and reseting all our flags
   //to resart our search.
   if(reachedCollectionPoint)
   {
     cout << "2" << endl;
-    if (timerTimeElapsed >= 5)
+    isPrecisionDriving = false;
+
+    long int elapsed = current_time - dropoffTimeStart;
+    float dropoffTimeElapsed = elapsed/1e3; // Convert from milliseconds to seconds
+
+
+    if (dropoffTimeElapsed >= 5)
     {
       if (finalInterrupt)
       {
+        ROS_INFO_STREAM("Finished going backwards..");
+
         result.type = behavior;
         result.b = nextProcess;
         result.reset = true;
@@ -61,8 +117,9 @@ Result DropOffController::DoWork() {
         cout << "1" << endl;
       }
     }
-    else if (timerTimeElapsed >= 0.1)
+    else if (dropoffTimeElapsed >= 1)
     {
+      ROS_INFO_STREAM("Drop off the cube. Go backwards for 3secs..");
       isPrecisionDriving = true;
       result.type = precisionDriving;
 
@@ -78,187 +135,153 @@ Result DropOffController::DoWork() {
 
   double distanceToCenter = hypot(this->centerLocation.x - this->currentLocation.x, this->centerLocation.y - this->currentLocation.y);
 
-  //check to see if we are driving to the center location or if we need to drive in a circle and look.
-  if (distanceToCenter > collectionPointVisualDistance && !circularCenterSearching && (count == 0)) {
 
+  //check to see if we are driving to the center location or if we need to drive in a circle and look.
+  if (!timerStarted && distanceToCenter > collectionPointVisualDistance && !circularCenterSearching && count == 0) {
+    ROS_INFO_STREAM("Moving to center from far distance..., targetHeld=" << targetHeld);
     result.type = waypoint;
     result.wpts.waypoints.clear();
     result.wpts.waypoints.push_back(this->centerLocation);
     startWaypoint = false;
     isPrecisionDriving = false;
 
-    timerTimeElapsed = 0;
-
     return result;
+  }
+
+  if (count > 0 || centerSeen) {
+    ROS_INFO_STREAM("Oh See Centers now... or Used to see the centers");
+    // ROS_INFO_STREAM_THROTTLE(3, "DropOffController: countLeft=" << countLeft << ", countRight=" << countRight << ", count=" << count);
+    if (!timerStarted && (centerSeen && count == 0)) { // if we doesn't see any count for 10 secs. Drop the cube ~ give up ~ return to search
+      if (!lostCenter) {
+         ROS_INFO_STREAM("Potentially lost center...Start 10sec timer..");
+        timeWithoutSeeingCenterTags = current_time;
+        lostCenter = true;
+        result.type = precisionDriving;
+        result.pd.cmdVel = 0.02;  //0.08; // moving straight
+        result.pd.cmdAngularError = 0.0;
+        return result;
+      }
+
+      long int elapsed = current_time - timeWithoutSeeingCenterTags;
+      float timeElapsedWithoutSeeingCenterTags = elapsed/1e3;
+
+      if (timeElapsedWithoutSeeingCenterTags >= 20) {
+         ROS_INFO_STREAM("See no center tags for > 20secs. Reset. Resume spin search");
+        isPrecisionDriving = false;
+        result.type = behavior;
+        result.b = nextProcess;
+        result.reset = true; // reset everything and return to search
+        finalInterrupt = true;
+        return result;
+      } else { // What to do if < 10 secs:
+        result.type = precisionDriving;
+        result.pd.cmdVel = 0.02;  //0.08; // moving straight
+        result.pd.cmdAngularError = 0.0;
+        return result;
+      }
+    } else {
+      lostCenter = false; // put here or create private variable of lostCenter
+    }
+
+    centerSeen = true;
+    isPrecisionDriving = true;
+
+    if (!timerStarted && ((countLeft == 0 || countRight == 0) && (count > 0 && count <= 10))) { // we arrived at the edge, either turn left or right
+      // ROS_INFO_STREAM("We arrived at the edge, either turn left or right.");
+      ROS_INFO_STREAM("Arrived at the edge. Turn left or right..");
+      if (countLeft > 0) { // TODO: What is result.type, .b here?
+        // turn left
+        result.pd.cmdVel = 0.07; // rotate but dont drive. 0.05 is to prevent turning in reverse
+        result.pd.cmdAngularError = centeringTurnRate;
+      } else {
+        // turn right
+        result.pd.cmdVel = 0.07; // rotate but dont drive. 0.05 is to prevent turning in reverse
+        result.pd.cmdAngularError = -centeringTurnRate;
+      }
+
+      result.type = precisionDriving;
+      isPrecisionDriving = true;
+      return result;
+    }
+
+    if (!timerStarted && countRight > 0 && countLeft > 0) { // arrived right at the center or it is time to stop turning (already aimed right at center)
+      ROS_INFO_STREAM("Saw tags on both sides. Going straight for 3secs.");
+      // ROS_INFO_STREAM("We are heading right at the center. Go straight for 2secs and then drop off. Timer started.");
+      // just go straight for 3 secs and then drop off
+      // start timer here
+      result.pd.cmdVel = searchVelocity;
+      result.pd.cmdAngularError = 0;
+      result.type = precisionDriving;
+      isPrecisionDriving = true;
+      timerStarted = true;
+      timeStart = current_time;
+      return result;
+    }
+
+    if (timerStarted) {
+      long int elapsed = current_time - timeStart;
+      float timeElapsed = elapsed/1e3;
+      if (timeElapsed < 3.0) {
+        ROS_INFO_STREAM("Counting to 3secs going straight.");
+        result.pd.cmdVel = searchVelocity;
+        result.pd.cmdAngularError = 0;
+      } else { // 3secs has passed
+        ROS_INFO_STREAM("3secs has passed.. Start dropOffTimer..");
+        dropoffTimeStart = current_time;
+
+        // ROS_INFO_STREAM("3secs has passed. Now drop off the cube, go backwards 3secs. Return to normal search.");
+        // stop rover, drop the cube, go backwards 4 secs
+        result.pd.cmdVel = 0;
+        result.pd.cmdAngularError = 0;
+        reachedCollectionPoint = true;
+        isPrecisionDriving = false;
+
+        timerStarted = false;
+        // just reset to initial value
+        centerSeen = false;
+        timeStart = current_time;
+      }
+      return result;
+    }
 
   }
-  else if (timerTimeElapsed >= 2)//spin search for center
-  {
-    Point nextSpinPoint;
 
+  if (!centerSeen) { //spin search for center
+    ROS_INFO_STREAM("Spinning Search for centers...");
+
+    Point nextSpinPoint;
     //sets a goal that is 60cm from the centerLocation and spinner
     //radians counterclockwise from being purly along the x-axis.
     nextSpinPoint.x = centerLocation.x + (initialSpinSize + spinSizeIncrease) * cos(spinner);
     nextSpinPoint.y = centerLocation.y + (initialSpinSize + spinSizeIncrease) * sin(spinner);
     nextSpinPoint.theta = atan2(nextSpinPoint.y - currentLocation.y, nextSpinPoint.x - currentLocation.x);
+    nextSpinPoint.id = rand(); // To avoid 60s timeout timer which can cause rover incorrectly considered as being stuck
 
-    result.type = waypoint;
+    result.type = waypoint; // this will forward control to DriveController
     result.wpts.waypoints.clear();
     result.wpts.waypoints.push_back(nextSpinPoint);
 
-    spinner += 45*(M_PI/180); //add 45 degrees in radians to spinner.
-    if (spinner > 2*M_PI) {
-      spinner -= 2*M_PI;
+    spinner = spinner + spinDirection * 45.0*(M_PI/180.0); //add 45 degrees in radians to spinner.
+    if (spinner > 2*M_PI || spinner < -2*M_PI) {
+      spinner -= spinDirection * 2*M_PI;
+      spinDirection = -spinDirection;
+      spinSizeIncrease += spinSizeIncrement;
     }
-    spinSizeIncrease += spinSizeIncrement/8;
     circularCenterSearching = true;
     //safety flag to prevent us trying to drive back to the
     //center since we have a block with us and the above point is
     //greater than collectionPointVisualDistance from the center.
-
     returnTimer = current_time;
     timerTimeElapsed = 0;
-
-  }
-
-  bool left = (countLeft > 0);
-  bool right = (countRight > 0);
-  bool centerSeen = (right || left);
-
-  //reset lastCenterTagThresholdTime timout timer to current time
-  if ((!centerApproach && !seenEnoughCenterTags) || (count > 0 && !seenEnoughCenterTags)) {
-
-    lastCenterTagThresholdTime = current_time;
-
-  }
-
-  if (count > 0 || seenEnoughCenterTags || prevCount > 0) //if we have a target and the center is located drive towards it.
-  {
-
-    cout << "9" << endl;
-    centerSeen = true;
-
-    if (first_center && isPrecisionDriving)
-    {
-      first_center = false;
-      result.type = behavior;
-      result.reset = false;
-      result.b = nextProcess;
-      return result;
-    }
-    isPrecisionDriving = true;
-
-    if (seenEnoughCenterTags) //if we have seen enough tags
-    {
-      if ((countLeft-5) > countRight) //and there are too many on the left
-      {
-        right = false; //then we say none on the right to cause us to turn right
-      }
-      else if ((countRight-5) > countLeft)
-      {
-        left = false; //or left in this case
-      }
-    }
-
-    float turnDirection = 1;
-    //reverse tag rejection when we have seen enough tags that we are on a
-    //trajectory in to the square we dont want to follow an edge.
-    if (seenEnoughCenterTags) turnDirection = -3;
-
-    result.type = precisionDriving;
-
-    //otherwise turn till tags on both sides of image then drive straight
-    if (left && right) {
-      result.pd.cmdVel = searchVelocity;
-      result.pd.cmdAngularError = 0.0;
-    }
-    else if (right) {
-      result.pd.cmdVel = -0.1 * turnDirection;
-      result.pd.cmdAngularError = -centeringTurnRate*turnDirection;
-    }
-    else if (left){
-      result.pd.cmdVel = -0.1 * turnDirection;
-      result.pd.cmdAngularError = centeringTurnRate*turnDirection;
-    }
-    else
-    {
-      result.pd.cmdVel = searchVelocity;
-      result.pd.cmdAngularError = 0.0;
-    }
-
-    //must see greater than this many tags before assuming we are driving into the center and not along an edge.
-    if (count > centerTagThreshold)
-    {
-      seenEnoughCenterTags = true; //we have driven far enough forward to be in and aligned with the circle.
-      lastCenterTagThresholdTime = current_time;
-    }
-    if (count > 0) //reset gaurd to prevent drop offs due to loosing tracking on tags for a frame or 2.
-    {
-      lastCenterTagThresholdTime = current_time;
-    }
-    //time since we dropped below countGuard tags
-    long int elapsed = current_time - lastCenterTagThresholdTime;
-    float timeSinceSeeingEnoughCenterTags = elapsed/1e3; // Convert from milliseconds to seconds
-
-    //we have driven far enough forward to have passed over the circle.
-    if (count < 1 && seenEnoughCenterTags && timeSinceSeeingEnoughCenterTags > dropDelay) {
-      centerSeen = false;
-    }
-    centerApproach = true;
-    prevCount = count;
-    count = 0;
-    countLeft = 0;
-    countRight = 0;
-  }
-
-  //was on approach to center and did not seenEnoughCenterTags
-  //for lostCenterCutoff seconds so reset.
-  else if (centerApproach) {
-
-    long int elapsed = current_time - lastCenterTagThresholdTime;
-    float timeSinceSeeingEnoughCenterTags = elapsed/1e3; // Convert from milliseconds to seconds
-    if (timeSinceSeeingEnoughCenterTags > lostCenterCutoff)
-    {
-      cout << "4" << endl;
-      //go back to drive to center base location instead of drop off attempt
-      reachedCollectionPoint = false;
-      seenEnoughCenterTags = false;
-      centerApproach = false;
-
-      result.type = waypoint;
-      result.wpts.waypoints.push_back(this->centerLocation);
-      if (isPrecisionDriving) {
-        result.type = behavior;
-        result.b = prevProcess;
-        result.reset = false;
-      }
-      isPrecisionDriving = false;
-      interrupt = false;
-      precisionInterrupt = false;
-    }
-    else
-    {
-      result.pd.cmdVel = searchVelocity;
-      result.pd.cmdAngularError = 0.0;
-    }
-
-    return result;
-
-  }
-
-  if (!centerSeen && seenEnoughCenterTags)
-  {
-    reachedCollectionPoint = true;
-    centerApproach = false;
-    returnTimer = current_time;
   }
 
   return result;
 }
 
 void DropOffController::Reset() {
+  ROS_INFO_STREAM("DropOffController:: RESETTING...");
   result.type = behavior;
-  result.b = wait;
+//  result.b = wait; // Commented to ensure rover will go to next process state.
   result.pd.cmdVel = 0;
   result.pd.cmdAngularError = 0;
   result.fingerAngle = -1;
@@ -268,6 +291,7 @@ void DropOffController::Reset() {
   spinner = 0;
   spinSizeIncrease = 0;
   prevCount = 0;
+  dropoffTimeStart = -1;
   timerTimeElapsed = -1;
 
   countLeft = 0;
@@ -285,6 +309,12 @@ void DropOffController::Reset() {
   startWaypoint = false;
   first_center = true;
   cout << "6" << endl;
+
+  lostCenter = false;
+  timerStarted = false;
+  startSpinSearchTimer = false;
+  spinDirection = 1;
+  centerSeen = false;
 
 }
 
@@ -345,12 +375,14 @@ bool DropOffController::HasWork() {
     timerTimeElapsed = elapsed/1e3; // Convert from milliseconds to seconds
   }
 
-  if (circularCenterSearching && timerTimeElapsed < 2 && !isPrecisionDriving) {
+  // Changed from 2 to 5, set time limit for 1 spin search wpt to 5secs.
+  if (circularCenterSearching && timerTimeElapsed < 5 && !isPrecisionDriving) {
     return false;
   }
 
   return ((startWaypoint || isPrecisionDriving));
 }
+
 
 bool DropOffController::IsChangingMode() {
   return isPrecisionDriving;

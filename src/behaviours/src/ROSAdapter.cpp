@@ -448,6 +448,14 @@ void targetHandler(const apriltags_ros::AprilTagDetectionArray::ConstPtr& messag
       Tag loc;
       loc.setID( message->detections[i].id );
 
+      // id = 256: center tags
+      // As rover runs, centerLocationOdom becomes more and more inaccurate due to drift.
+      // This logic resets centerLocationOdom to location where rover sees the center zone
+      // to solve this issue.
+      if (message->detections[i].id == 256) { // center seen, reset centerLocationOdom
+        centerLocationOdom = currentLocation;
+      }
+
       // Pass the position of the AprilTag
       geometry_msgs::PoseStamped tagPose = message->detections[i].pose;
       loc.setPosition( make_tuple( tagPose.pose.position.x,
@@ -675,9 +683,8 @@ void transformMapCentertoOdom()
   mapPose.pose.position.y = centerLocationMap.y;
   geometry_msgs::PoseStamped odomPose;
   string x = "";
-  
-  try
-  { //attempt to get the transform of the center point in map frame to odom frame.
+
+  try { //attempt to get the transform of the center point in map frame to odom frame.
     tfListener->waitForTransform(publishedName + "/map", publishedName + "/odom", ros::Time::now(), ros::Duration(1.0));
     tfListener->transformPose(publishedName + "/odom", mapPose, odomPose);
   }

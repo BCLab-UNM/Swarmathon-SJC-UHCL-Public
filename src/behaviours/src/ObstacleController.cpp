@@ -1,4 +1,6 @@
 #include "ObstacleController.h"
+#include <ros/ros.h>
+#include <ros/console.h>
 
 ObstacleController::ObstacleController()
 {
@@ -20,7 +22,7 @@ void ObstacleController::Reset() {
 
 // Avoid crashing into objects detected by the ultraound
 void ObstacleController::avoidObstacle() {
-  
+
     //always turn left to avoid obstacles
     if (right < 0.8 || center < 0.8 || left < 0.8) {
       result.type = precisionDriving;
@@ -56,7 +58,8 @@ void ObstacleController::avoidCollectionZone() {
 
 
 Result ObstacleController::DoWork() {
-
+  ROS_INFO_STREAM("ObstacleController DoWork=" << current_time);
+//  ROS_INFO_STREAM_THROTTLE(2,"PickUpController DoWork");
   clearWaypoints = true;
   set_waypoint = true;
   result.PIDMode = CONST_PID;
@@ -64,9 +67,11 @@ Result ObstacleController::DoWork() {
   // The obstacle is an april tag marking the collection zone
   if(collection_zone_seen){
     avoidCollectionZone();
+    ROS_INFO_STREAM("ObstacleController: See collectionZone");
   }
   else {
     avoidObstacle();
+    ROS_INFO_STREAM("ObstacleController: See obstacle");
   }
 
   //if an obstacle has been avoided
@@ -76,13 +81,17 @@ Result ObstacleController::DoWork() {
     set_waypoint = false;
     clearWaypoints = false;
 
-    result.type = waypoint; 
+    result.type = waypoint;
     result.PIDMode = FAST_PID; //use fast pid for waypoints
     Point forward;            //waypoint is directly ahead of current heading
-    forward.x = currentLocation.x + (0.5 * cos(currentLocation.theta));
-    forward.y = currentLocation.y + (0.5 * sin(currentLocation.theta));
+    // 1.2m and 1.20 radians seems to make rover avoid collection/obstacle faster
+    // without hanging around collection zone or obstacle too much.
+    forward.x = currentLocation.x + (1.2 * cos(currentLocation.theta + 1.20));
+    forward.y = currentLocation.y + (1.2 * sin(currentLocation.theta + 1.20));
+    forward.id = -3; // set unique id to -3
     result.wpts.waypoints.clear();
     result.wpts.waypoints.push_back(forward);
+    // This waypoint is forwarded directly to DriveController without going through SearchController
   }
 
   return result;
@@ -119,7 +128,7 @@ void ObstacleController::ProcessData() {
 
   //If we are ignoring the center sonar
   if(ignore_center_sonar){
-    //If the center distance is longer than the reactivation threshold 
+    //If the center distance is longer than the reactivation threshold
     if(center > reactivate_center_sonar_threshold){
       //currently do not re-enable the center sonar instead ignore it till the block is dropped off
       //ignore_center_sonar = false; //look at sonar again beacuse center ultrasound has gone long
@@ -186,10 +195,13 @@ bool ObstacleController::checkForCollectionZoneTags( vector<Tag> tags ) {
 
   for ( auto & tag : tags ) { 
 
-    // Check the orientation of the tag. If we are outside the collection zone the yaw will be positive so treat the collection zone as an obstacle. 
-    //If the yaw is negative the robot is inside the collection zone and the boundary should not be treated as an obstacle. 
+    // Check the orientation of the tag. If we are outside the collection zone the yaw will be positive so treat the collection zone as an obstacle.
+    //If the yaw is negative the robot is inside the collection zone and the boundary should not be treated as an obstacle.
     //This allows the robot to leave the collection zone after dropping off a target.
-    if ( tag.calcYaw() > 0 ) 
+
+ //     ROS_INFO_STREAM ("tag.calcYaw = " << tag.calcYaw());
+
+      if ( tag.calcYaw() > 0 )
       {
 	// checks if tag is on the right or left side of the image
 	if (tag.getPositionX() + camera_offset_correction > 0) {
@@ -231,6 +243,12 @@ bool ObstacleController::ShouldInterrupt() {
 }
 
 bool ObstacleController::HasWork() {
+  if (targetHeld) {
+    // temporarily ignore avoiding obstacle when rover has the cube to bypass noisy filter
+    // TODO: Implement filter to remove ultrasound sensor noise
+    return false;
+  }
+
   //there is work if a waypoint needs to be set or the obstacle hasnt been avoided
   if (can_set_waypoint && set_waypoint)
   {

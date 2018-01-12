@@ -38,14 +38,14 @@ private:
   //Constants
 
   const float cameraOffsetCorrection = 0.020; //meters
-  const float centeringTurnRate = 0.15; //radians
+  const float centeringTurnRate = 0.25; //radians // unused
   const int centerTagThreshold = 8;
   const int lostCenterCutoff = 4; //seconds before giving up on drop off beacuse center cannot be seen anymore
-  const float collectionPointVisualDistance = 0.2; //in meters
-  const float initialSpinSize = 0.05; //in meters aka 10cm
-  const float spinSizeIncrement = 0.50; //in meters
+  const float collectionPointVisualDistance = 0.5; //in meters // was 0.2
+  const float initialSpinSize = 0.5; //in meters aka 10cm
+  const float spinSizeIncrement = 1.0; //in meters // was 0.50
   const float searchVelocity = 0.15; //in meters per second
-  const float dropDelay = 0.5; //delay in seconds for dropOff
+  const float dropDelay = 0.5; //delay in seconds for dropOff // unused
 
 
 
@@ -59,7 +59,7 @@ private:
   float spinner;
 
   //Timer for return code (dropping the cube in the center)- used for timerTimeElapsed
-  long int returnTimer;
+  long int returnTimer; // starts when rover starts the spin search
 
   //Time since last exceeding the tag threshold
   long int lastCenterTagThresholdTime;
@@ -119,6 +119,18 @@ private:
   bool precisionInterrupt = false;
   bool finalInterrupt = false;
   bool first_center = true;
+
+
+  bool startSpinSearchTimer = false;
+  long int spinSearchStartTime;
+  float spinDirection = 1;
+  bool lostCenter = false;
+
+  long int  timeWithoutSeeingCenterTags;
+  bool timerStarted = false;
+  long int timeStart;
+  bool centerSeen;
+  long int dropoffTimeStart;
 
 };
 #endif // end header define

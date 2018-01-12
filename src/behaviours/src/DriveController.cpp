@@ -28,7 +28,7 @@ void DriveController::Reset()
 
 Result DriveController::DoWork()
 {
-  
+   ROS_INFO_STREAM("DriveController DoWork=" << current_time);
   ///WARNING waypoint input must use FAST_PID at this point in time failure to set fast pid will result in no movment
 
   if(result.type == behavior)
@@ -80,9 +80,37 @@ Result DriveController::DoWork()
 
   case STATE_MACHINE_WAYPOINTS:
   {
+    // if waypointStartTime is unitilized, initialize it to current time (meaning start wpt timeout timer)
+    if (waypointStartTime == -1) {
+      waypointStartTime = current_time;
+      previous_goal_id = waypoints.back().id; // saves current goal id of current working wpt.
+    }
 
-    //Handles route planning and navigation as well as making sure all waypoints are valid.
+    // -3 is id of obstacle waypoint.
+    if (waypoints.back().id != -3) {
+      // if rover is able to get new waypoint (not stuck)
+      if (waypoints.back().id != previous_goal_id) {
+        previous_goal_id = waypoints.back().id; // save current goal id
+        waypointStartTime = current_time; // reset the timeout timer to current_time
+      }
+    }
 
+    float timeElapsed = (current_time - waypointStartTime)/1e3; // elapsed time in seconds.
+
+
+    // If rover stucks at one waypoint for 60 secs
+    // meaning if rover keeps working on wpt id -3 or previous id (regular wpt, spin search wpt or centerLocation wpt) for 60s
+    // then interrupt and return to LogicController
+    if ((waypoints.back().id == -3 || waypoints.back().id == previous_goal_id) && timeElapsed > 60) {
+      waypoints.pop_back();
+      stateMachineState = STATE_MACHINE_WAITING;
+      result.type = behavior;
+      result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
+      interupt = true;
+      return result;
+    }
+
+    //Handles route planning and navigation as well as makeing sure all waypoints are valid.
     bool tooClose = true;
     //while we have waypoints and they are tooClose to drive to
     while (!waypoints.empty() && tooClose)
@@ -99,7 +127,7 @@ Result DriveController::DoWork()
         tooClose = false;
       }
     }
-    
+
     //if we are out of waypoints then interupt and return to logic controller
     if (waypoints.empty())
     {
@@ -148,12 +176,13 @@ Result DriveController::DoWork()
       if (result.PIDMode == FAST_PID)
       {
         fastPID(0.0, errorYaw, result.pd.setPointVel, result.pd.setPointYaw);
-      }
+            }
 
       break;
     }
     else
     {
+
       //move to differential drive step
       stateMachineState = STATE_MACHINE_SKID_STEER;
 
@@ -163,9 +192,9 @@ Result DriveController::DoWork()
 
   case STATE_MACHINE_SKID_STEER:
   {
-      // Calculate angle between currentLocation.x/y and waypoints.back().x/y
-      // Drive forward
-      // Stay in this state until angle is at least PI/2
+    // Calculate angle between currentLocation.x/y and waypoints.back().x/y
+    // Drive forward
+    // Stay in this state until angle is at least PI/2
 
     // calculate the distance between current and desired heading in radians
     waypoints.back().theta = atan2(waypoints.back().y - currentLocation.y, waypoints.back().x - currentLocation.x);
@@ -195,6 +224,15 @@ Result DriveController::DoWork()
 
       // move back to transform step
       stateMachineState = STATE_MACHINE_WAYPOINTS;
+
+      // When we finished one waypoint, if this is obstacle waypoint, we want resume previous waypoint.
+      if (waypoints.back().id != -3) {
+        ROS_INFO_STREAM("Finished Regular wpt goal!");
+        result.is_avoid_obstacle_waypoint = false;
+      } else {
+        ROS_INFO_STREAM("Finished Obstacle wpt goal.");
+        result.is_avoid_obstacle_waypoint = true;
+      }
     }
 
     break;
@@ -238,7 +276,7 @@ void DriveController::ProcessData()
 {
   //determine if the drive commands are waypoint or precision driving
   if (result.type == waypoint) {
-    
+
     //sets logic controller into stand by mode while drive controller works
     result.type = behavior;
     result.b = noChange;
@@ -249,7 +287,7 @@ void DriveController::ProcessData()
 
     //add waypoints onto stack and change state to start following them
     if (!result.wpts.waypoints.empty()) {
-      waypoints.insert(waypoints.end(),result.wpts.waypoints.begin(), result.wpts.waypoints.end());
+        waypoints.insert(waypoints.end(),result.wpts.waypoints.begin(), result.wpts.waypoints.end());
       stateMachineState = STATE_MACHINE_WAYPOINTS;
     }
   }
@@ -257,14 +295,12 @@ void DriveController::ProcessData()
   {
 
     //calculate inputs into the PIDS for precision driving
-    if (result.PIDMode == FAST_PID)
-    {
+    if (result.PIDMode == FAST_PID){
       float vel = result.pd.cmdVel -linearVelocity;
       float setVel = result.pd.cmdVel;
       fastPID(vel,result.pd.cmdAngularError, setVel, result.pd.setPointYaw);
     }
-    else if (result.PIDMode == SLOW_PID)
-    {
+    else if (result.PIDMode == SLOW_PID) {
       //will take longer to reach the setPoint but has less chanse of an overshoot especially with slow feedback
       float vel = result.pd.cmdVel -linearVelocity;
       float setVel = result.pd.cmdVel;
@@ -297,11 +333,12 @@ void DriveController::fastPID(float errorVel, float errorYaw , float setPointVel
   int right = velOut + yawOut; //left and right are the same for vel output but opposite for yaw output
 
   //prevent combine output from going over tihs value
-  int sat = 180; 
+  int sat = 180;
   if (left  >  sat) {left  =  sat;}
   if (left  < -sat) {left  = -sat;}
   if (right >  sat) {right =  sat;}
   if (right < -sat) {right = -sat;}
+
   this->left = left;
   this->right = right;
 }
@@ -326,8 +363,7 @@ void DriveController::slowPID(float errorVel,float errorYaw, float setPointVel, 
   this->right = right;
 }
 
-void DriveController::constPID(float erroVel,float constAngularError, float setPointVel, float setPointYaw)
-{
+void DriveController::constPID(float erroVel,float constAngularError, float setPointVel, float setPointYaw) {
 
   //cout << "PID CONST" << endl; //DEBUGGING CODE
 
@@ -348,8 +384,7 @@ void DriveController::constPID(float erroVel,float constAngularError, float setP
 }
 
 
-void DriveController::SetVelocityData(float linearVelocity,float angularVelocity)
-{
+void DriveController::SetVelocityData(float linearVelocity,float angularVelocity) {
   this->linearVelocity = linearVelocity;
   this->angularVelocity = angularVelocity;
 }
@@ -357,8 +392,7 @@ void DriveController::SetVelocityData(float linearVelocity,float angularVelocity
 
 
 
-PIDConfig DriveController::fastVelConfig()
-{
+PIDConfig DriveController::fastVelConfig() {
   PIDConfig config;
 
   config.Kp = 60; //proportional constant

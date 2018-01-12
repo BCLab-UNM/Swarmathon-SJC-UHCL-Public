@@ -17,7 +17,6 @@ float PID::PIDOut(float calculatedError, float setPoint)
   {
     Error.pop_back();
   }
-
   Error.insert(Error.begin(), calculatedError); //insert new error into vector for history purposes.
 
   float P = 0; //proportional yaw output
@@ -66,16 +65,13 @@ float PID::PIDOut(float calculatedError, float setPoint)
 
   //error averager
   float avgError = 0;
-  if (Error.size() >= config.errorHistLength)
-  {
-    for (int i = 0; i < config.errorHistLength; i++)
-    {
+  if (Error.size() >= config.errorHistLength) {
+    for (int i = 0; i < config.errorHistLength; i++) {
       avgError += Error[i];
     }
     avgError /= config.errorHistLength;//config.errorHistLength;
   }
-  else
-  {
+  else {
     avgError = calculatedError;
   }
 

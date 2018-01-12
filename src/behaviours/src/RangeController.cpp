@@ -1,6 +1,8 @@
 #include "RangeController.h"
 #include <cmath> // For square root function
 #include <iostream>
+#include <ros/ros.h>
+#include <ros/console.h>
 
 RangeShape::RangeShape()
 {
@@ -74,7 +76,8 @@ void RangeController::Reset()
 
 Result RangeController::DoWork() 
 {
- 
+  ROS_INFO_STREAM("RangeController DoWork");
+//  ROS_INFO_STREAM_THROTTLE(2,"RangeController DoWork");
   Result result;
 
   // Move the rover a parameterised distance towards the origin 

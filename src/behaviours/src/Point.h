@@ -3,6 +3,7 @@
 
 
 struct Point {
+  int id; // Every waypoint has an ID
   float x;
   float y;
   float theta;

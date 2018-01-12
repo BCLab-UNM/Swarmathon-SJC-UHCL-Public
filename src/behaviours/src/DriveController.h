@@ -24,6 +24,10 @@ private:
 
   Result result;
 
+  long int current_time; // holds curent time in ms
+  // waypointStartTime holds start time of 60s timeout amount for a waypoint. -1 means uninitialized.
+  long int waypointStartTime = -1;
+  int  previous_goal_id; // holds previous goal id
   //MAX PWM is 255
   //abridge currently limits MAX to 120 to prevent overcurrent draw
   float left; //left wheels PWM value
@@ -31,7 +35,8 @@ private:
 
   bool interupt = false; //hold if interupt has occured yet
 
-  float rotateOnlyAngleTolerance = 0.05;  //May be too low?
+  // was 0.15. Adjusted to prevent rotating forever (can't get out of STATE_MACHINE_ROTATE).
+  float rotateOnlyAngleTolerance = 0.40;
   float finalRotationTolerance = 0.1; //dead code not used
   const float waypointTolerance = 0.15; //15 cm tolerance.
 

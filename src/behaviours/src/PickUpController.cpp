@@ -1,6 +1,8 @@
 #include "PickUpController.h"
 #include <limits> // For numeric limits
 #include <cmath> // For hypot
+#include <ros/ros.h>
+#include <ros/console.h>
 
 PickUpController::PickUpController()
 {
@@ -94,25 +96,36 @@ void PickUpController::SetTagData(vector<Tag> tags)
 
     cout << "blockYawError TAGDATA:  " << blockYawError << endl;
 
+    // 0.150 is distance from camera to cube within which cube is considered as picked up successfully.
+    // TODO: May need to tune blockDistanceFromCamera value to get best number.
+    if (blockDistanceFromCamera < 0.150 && targetFound) {
+      // go to LogicController and switch to next process (DropOffController)
+      result.type = behavior;
+      result.b = nextProcess;
+      result.reset = true;
+      targetHeld = true;
+    }
+
   }
 
 }
 
 
+// Unused since we use camera to determine if cube is successfully picked up.
+// We don't use center ultrasound sensor anymore.
 bool PickUpController::SetSonarData(float rangeCenter)
 {
 
-  if (rangeCenter < 0.12 && targetFound)
-  {
-    result.type = behavior;
-    result.b = nextProcess;
-    result.reset = true;
-    targetHeld = true;
-    return true;
-  }
-
+//  if (rangeCenter < 0.12 && targetFound)
+//  {
+//    result.type = behavior;
+//    result.b = nextProcess;
+//    result.reset = true;
+//    targetHeld = true;
+//    return true;
+//  }
+//
   return false;
-
 }
 
 void PickUpController::ProcessData()
@@ -134,8 +147,11 @@ void PickUpController::ProcessData()
 
   //cout << "distance : " << blockDistanceFromCamera << " time is : " << Td << endl;
 
-  if (blockDistanceFromCamera < 0.14 && Td < 3.9)
+  // 0.150 is distance from camera to cube within which cube is considered as picked up successfully.
+  // TODO: May need to tune blockDistanceFromCamera value to get best number.
+  if (blockDistanceFromCamera < 0.150 && Td < 3.9)
   {
+    // go to LogicController and switch to next process (DropOffController)
     result.type = behavior;
     result.b = nextProcess;
     result.reset = true;
@@ -182,7 +198,8 @@ bool PickUpController::ShouldInterrupt(){
 
 Result PickUpController::DoWork()
 {
-
+  ROS_INFO_STREAM("PickUpController DoWork=" << current_time);
+//  ROS_INFO_STREAM_THROTTLE(2,"PickUpController DoWork");
   has_control = true;
 
   if (!targetHeld)
@@ -370,6 +387,8 @@ void PickUpController::Reset() {
   ignoreCenterSonar = false;
 }
 
+
+// Unused. We use camera only.
 void PickUpController::SetUltraSoundData(bool blockBlock){
   this->blockBlock = blockBlock;
 }
