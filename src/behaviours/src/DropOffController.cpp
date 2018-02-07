@@ -142,6 +142,7 @@ Result DropOffController::DoWork() {
     result.type = waypoint;
     result.wpts.waypoints.clear();
     result.wpts.waypoints.push_back(this->centerLocation);
+    result.wpts.waypoints.back().id = 8;
     startWaypoint = false;
     isPrecisionDriving = false;
 

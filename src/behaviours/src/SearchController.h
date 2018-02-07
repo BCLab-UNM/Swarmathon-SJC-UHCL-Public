@@ -29,6 +29,7 @@ public:
   void SetSuccesfullPickup();
   void SetWaypointTimeout(bool timeout);
   bool SetResumePreviousWaypoint(bool resume);
+  void SetAtBoundary(bool atboundary);
 
 protected:
 
@@ -55,6 +56,7 @@ private:
   int num_waypoints;
   bool waypoint_timeout = false;
   bool resume_previous_waypoint; // used when rover finished avoiding obstacle/collection zone.
+  bool at_boundary = false;
 
 };
 

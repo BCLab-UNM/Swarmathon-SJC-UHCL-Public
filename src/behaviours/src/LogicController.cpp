@@ -175,7 +175,13 @@ Result LogicController::DoWork() {
       // so that rover will go the default wpt, hence, avoid being stuck.
       searchController.SetWaypointTimeout(true);
     }
-
+    if (result.at_boundary) {
+        // Reset the flag so next time this logic won't be executed again
+        result.at_boundary = false;
+        // Notify SearchController to reset waypoint ID to default wpt id (= 0)
+        // so that rover will go the default wpt, hence, avoid being stuck.
+        searchController.SetAtBoundary(true);
+    }
     break;
   }//end of waiting case*****************************************************************************************
 
@@ -398,6 +404,8 @@ void LogicController::SetCurrentTimeInMilliSecs( long int time )
   dropOffController.SetCurrentTimeInMilliSecs( time );
   pickUpController.SetCurrentTimeInMilliSecs( time );
   obstacleController.setCurrentTimeInMilliSecs( time );
+  // DriveController needs to use current time
+  driveController.setCurrentTimeInMilliSecs( time );
 }
 
 void LogicController::SetModeAuto() {

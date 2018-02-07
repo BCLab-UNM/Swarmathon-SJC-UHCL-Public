@@ -19,10 +19,12 @@ public:
   void SetResultData(Result result) {this->result = result;}
   void SetVelocityData(float linearVelocity,float angularVelocity);
   void SetCurrentLocation(Point currentLocation) {this->currentLocation = currentLocation;}
+  void setCurrentTimeInMilliSecs( long int time );
 
 private:
 
   Result result;
+
 
   long int current_time; // holds curent time in ms
   // waypointStartTime holds start time of 60s timeout amount for a waypoint. -1 means uninitialized.

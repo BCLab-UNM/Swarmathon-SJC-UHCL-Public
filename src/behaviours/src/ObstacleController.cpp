@@ -243,11 +243,11 @@ bool ObstacleController::ShouldInterrupt() {
 }
 
 bool ObstacleController::HasWork() {
-  if (targetHeld) {
+  //if (targetHeld) {
     // temporarily ignore avoiding obstacle when rover has the cube to bypass noisy filter
     // TODO: Implement filter to remove ultrasound sensor noise
-    return false;
-  }
+    //return false;
+  //}
 
   //there is work if a waypoint needs to be set or the obstacle hasnt been avoided
   if (can_set_waypoint && set_waypoint)

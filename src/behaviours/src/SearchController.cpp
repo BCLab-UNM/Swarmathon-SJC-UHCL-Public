@@ -105,11 +105,16 @@ Result SearchController::DoWork() {
 
       // If rover is stuck, return to first waypoint.
       if (waypoint_timeout) {
-        goal_id = 0;
+        goal_id += 3;
         waypoint_timeout = false;
       }
 
-      // If rover finishes avoiding obstacle/collection zone, resume previous waypoint
+        if (at_boundary) {
+            goal_id = 8;
+            at_boundary = false;
+        }
+
+        // If rover finishes avoiding obstacle/collection zone, resume previous waypoint
       if (resume_previous_waypoint) { // resume from obstacle avoidance
         ROS_INFO_STREAM("SearchController:resume from obstacle avoidance.");
         resume_previous_waypoint = false;
@@ -125,9 +130,10 @@ Result SearchController::DoWork() {
       ROS_INFO_STREAM("Next waypoint is: " << "x=" << searchLocation.x << ", y=" << searchLocation.y);
 
       goal_id++; // set goal_id to next waypoint
+        ROS_INFO_STREAM('goal_id = ' << goal_id);
 
       if (goal_id == num_waypoints - 1) { // if 120 waypoints are done, go back to waypoint 7.
-        goal_id = 7;
+        goal_id = 8;
       }
     }
 
@@ -180,4 +186,8 @@ void SearchController::SetWaypointTimeout(bool timeout) {
 
 bool SearchController::SetResumePreviousWaypoint(bool resume) {
   resume_previous_waypoint = resume;
+}
+
+void SearchController::SetAtBoundary(bool atboundary) {
+    at_boundary = atboundary;
 }

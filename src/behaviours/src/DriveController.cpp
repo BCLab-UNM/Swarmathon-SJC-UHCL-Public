@@ -108,6 +108,13 @@ Result DriveController::DoWork()
       result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
       interupt = true;
       return result;
+    } else if (hypot(currentLocation.x,currentLocation.y) > 12.0 || waypoints.back().id > 100){
+        waypoints.pop_back();
+        stateMachineState = STATE_MACHINE_WAITING;
+        result.type = behavior;
+        result.at_boundary = true; // To signal SearchController to reset goal_id back to default one.
+        interupt = true;
+        return result;
     }
 
     //Handles route planning and navigation as well as makeing sure all waypoints are valid.
@@ -522,4 +529,9 @@ PIDConfig DriveController::constYawConfig() {
 
   return config;
 
+}
+
+void DriveController::setCurrentTimeInMilliSecs( long int time )
+{
+  current_time = time;
 }

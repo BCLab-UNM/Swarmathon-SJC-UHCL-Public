@@ -82,4 +82,6 @@ struct Result {
   bool reset; //holds a reset command where logic controller will reset the controller that asks
   bool waypoint_timeout; // for communication between DriveController and SearchController
   bool is_avoid_obstacle_waypoint; // for communication between DriveController and SearchController
+  bool at_boundary = false; // for communication between DriveController and SearchController
+
 };
