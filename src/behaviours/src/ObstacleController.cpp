@@ -24,7 +24,7 @@ void ObstacleController::Reset() {
 void ObstacleController::avoidObstacle() {
 
     //always turn left to avoid obstacles
-    if (right < 0.8 || center < 0.8 || left < 0.8) {
+    if (right < 1.0 || center < 1.0 || left < 1.0) {
       result.type = precisionDriving;
 
       result.pd.cmdAngular = -K_angular;

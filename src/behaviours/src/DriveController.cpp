@@ -101,14 +101,14 @@ Result DriveController::DoWork()
     // If rover stucks at one waypoint for 60 secs
     // meaning if rover keeps working on wpt id -3 or previous id (regular wpt, spin search wpt or centerLocation wpt) for 60s
     // then interrupt and return to LogicController
-    if ((waypoints.back().id == -3 || waypoints.back().id == previous_goal_id) && timeElapsed > 60) {
+    if ((waypoints.back().id == -3 || waypoints.back().id == previous_goal_id) && timeElapsed > 29 && (waypoints.back().id != -4)) {
       waypoints.pop_back();
       stateMachineState = STATE_MACHINE_WAITING;
       result.type = behavior;
       result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
       interupt = true;
       return result;
-    } else if (hypot(currentLocation.x,currentLocation.y) > 12.0 || waypoints.back().id > 100){
+    } else if (hypot(currentLocation.x,currentLocation.y) > 12.0 || waypoints.back().id > 90){
         waypoints.pop_back();
         stateMachineState = STATE_MACHINE_WAITING;
         result.type = behavior;
