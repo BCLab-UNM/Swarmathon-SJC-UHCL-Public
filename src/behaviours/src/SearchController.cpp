@@ -8,6 +8,8 @@ SearchController::SearchController() {
   currentLocation.y = 0;
   currentLocation.theta = 0;
 
+  goal_id = rng->uniformInteger(8,20);
+
   centerLocation.x = 0;
   centerLocation.y = 0;
   centerLocation.theta = 0;
@@ -105,12 +107,12 @@ Result SearchController::DoWork() {
 
       // If rover is stuck, return to first waypoint.
       if (waypoint_timeout) {
-        goal_id += 3;
+        goal_id += 6;
         waypoint_timeout = false;
       }
 
         if (at_boundary) {
-            goal_id = 8;
+            goal_id = 14;
             at_boundary = false;
         }
 
@@ -130,10 +132,10 @@ Result SearchController::DoWork() {
       ROS_INFO_STREAM("Next waypoint is: " << "x=" << searchLocation.x << ", y=" << searchLocation.y);
 
       goal_id++; // set goal_id to next waypoint
-        ROS_INFO_STREAM('goal_id = ' << goal_id);
+        ROS_INFO_STREAM("goal_id = " << goal_id);
 
-      if (goal_id == num_waypoints - 1) { // if 120 waypoints are done, go back to waypoint 7.
-        goal_id = 8;
+      if (goal_id == num_waypoints - 1) { // if 120 waypoints are done, go back to waypoint 11.
+        goal_id = 11;
       }
     }
 

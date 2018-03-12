@@ -101,13 +101,20 @@ Result DriveController::DoWork()
     // If rover stucks at one waypoint for 60 secs
     // meaning if rover keeps working on wpt id -3 or previous id (regular wpt, spin search wpt or centerLocation wpt) for 60s
     // then interrupt and return to LogicController
-    if ((waypoints.back().id == -3 || waypoints.back().id == previous_goal_id) && timeElapsed > 29 && (waypoints.back().id != -4)) {
-      waypoints.pop_back();
-      stateMachineState = STATE_MACHINE_WAITING;
-      result.type = behavior;
-      result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
-      interupt = true;
-      return result;
+    if ((waypoints.back().id == -3 || waypoints.back().id == previous_goal_id) && timeElapsed > 60 && (waypoints.back().id != -4)) {
+       waypoints.pop_back();
+       stateMachineState = STATE_MACHINE_WAITING;
+       result.type = behavior;
+       result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
+       interupt = true;
+       return result;
+    } else if ((waypoints.back().id == previous_goal_id) && timeElapsed > 19 && (waypoints.back().id != -4)){
+        waypoints.pop_back();
+        stateMachineState = STATE_MACHINE_WAITING;
+        result.type = behavior;
+        result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
+        interupt = true;
+        return result;
     } else if (waypoints.back().id > 90){
         waypoints.pop_back();
         stateMachineState = STATE_MACHINE_WAITING;
@@ -162,7 +169,7 @@ Result DriveController::DoWork()
     // Calculate angle between currentLocation.theta and waypoints.front().theta
     // Rotate left or right depending on sign of angle
     // Stay in this state until angle is minimized
-
+    // TODO: may fail to converge because inaccuracy in currentLocation.x and y
     waypoints.back().theta = atan2(waypoints.back().y - currentLocation.y, waypoints.back().x - currentLocation.x);
 
     // Calculate the diffrence between current and desired heading in radians.
@@ -294,7 +301,17 @@ void DriveController::ProcessData()
 
     //add waypoints onto stack and change state to start following them
     if (!result.wpts.waypoints.empty()) {
+      if (!waypoints.empty() && waypoints.back().id == -3) { // meaning if obstacle waypoint is already added, do not insert any obstacle wpt.
+        ROS_INFO_STREAM("Clear current obstacle wpt. Adding new obstacle waypoint.");
+        waypoints.clear();
         waypoints.insert(waypoints.end(),result.wpts.waypoints.begin(), result.wpts.waypoints.end());
+      } else {
+        if (result.wpts.waypoints.back().id == -3) {
+          ROS_INFO_STREAM("Obstacle waypoint added.");
+        }
+        waypoints.insert(waypoints.end(),result.wpts.waypoints.begin(), result.wpts.waypoints.end());
+      }
+
       stateMachineState = STATE_MACHINE_WAYPOINTS;
     }
   }

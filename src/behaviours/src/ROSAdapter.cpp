@@ -103,6 +103,19 @@ bool initilized = false;
 float linearVelocity = 0;
 float angularVelocity = 0;
 
+float sonarLeftRange;
+float sonarCenterRange;
+float sonarRightRange;
+double currentTime;
+double obstacleStartTime = {99999.0};
+int immobileCount = {0};
+
+bool avoidingObstacle = {false};
+vector<Tag> present_tags;
+int homeTagCount;
+bool backUp = {false};
+double backUpStartTime = {0.0};
+
 float prevWrist = 0;
 float prevFinger = 0;
 long int startTime = 0;
@@ -178,6 +191,7 @@ void sonarHandler(const sensor_msgs::Range::ConstPtr& sonarLeft, const sensor_ms
 
 // Converts the time passed as reported by ROS (which takes Gazebo simulation rate into account) into milliseconds as an integer.
 long int getROSTimeInMilliSecs();
+double collisionTime;
 
 int main(int argc, char **argv) {
   
@@ -306,75 +320,132 @@ void behaviourStateMachine(const ros::TimerEvent&)
   }
 
   // Robot is in automode
-  if (currentMode == 2 || currentMode == 3)
-  {
-    
-    humanTime();
-    
-    //update the time used by all the controllers
-    logicController.SetCurrentTimeInMilliSecs( getROSTimeInMilliSecs() );
-    
-    //update center location
-    logicController.SetCenterLocationOdom( updateCenterLocation() );
-    
-    //ask logic controller for the next set of actuator commands
-    result = logicController.DoWork();
-    
-    bool wait = false;
-    
-    //if a wait behaviour is thrown sit and do nothing untill logicController is ready
-    if (result.type == behavior)
-    {
-      if (result.b == wait)
-      {
-        wait = true;
-      }
-    }
-    
-    //do this when wait behaviour happens
-    if (wait)
-    {
-      sendDriveCommand(0.0,0.0);
-      std_msgs::Float32 angle;
-      
-      angle.data = prevFinger;
-      fingerAnglePublish.publish(angle);
-      angle.data = prevWrist;
-      wristAnglePublish.publish(angle);
-    }
-    
-    //normally interpret logic controllers actuator commands and deceminate them over the appropriate ROS topics
-    else
-    {
-      
-      sendDriveCommand(result.pd.left,result.pd.right);
-      
-
-      //Alter finger and wrist angle is told to reset with last stored value if currently has -1 value
-      std_msgs::Float32 angle;
-      if (result.fingerAngle != -1)
-      {
-        angle.data = result.fingerAngle;
-        fingerAnglePublish.publish(angle);
-        prevFinger = result.fingerAngle;
+  if (currentMode == 2 || currentMode == 3) {
+      currentTime  = ros::Time::now().toSec();
+      homeTagCount = 0;
+      for (int i = 0; i < present_tags.size(); i++) {
+          if (present_tags[i].getID() == 256) {
+              homeTagCount++;
+          }
       }
 
-      if (result.wristAngle != -1)
-      {
-        angle.data = result.wristAngle;
-        wristAnglePublish.publish(angle);
-        prevWrist = result.wristAngle;
+      if (!backUp) {
+          if (homeTagCount > 3 && result.fingerAngle > 1.0) {
+              backUp = true;
+              backUpStartTime = currentTime;
+              avoidingObstacle = false;
+          }else if (homeTagCount > 3 && result.fingerAngle < 0.2) {
+              avoidingObstacle = false;
+          }else{
+              backUp = false;
+              present_tags.clear();
+          }
       }
-    }
-    
-    //publishHandeling here
-    //logicController.getPublishData(); suggested
-    
-    
-    //adds a blank space between sets of debugging data to easily tell one tick from the next
-    cout << endl;
-    
-  }
+
+      if (backUp) {
+          if (currentTime > backUpStartTime + 2.0) {
+              backUp = false;
+              sendDriveCommand(-55, 55);
+              present_tags.clear();
+          }else{
+              sendDriveCommand(-60, -60);
+          }
+
+      }else if (avoidingObstacle) {
+              if (currentTime > obstacleStartTime + 0.75) {
+                  if (sonarLeftRange < 0.7 || sonarRightRange < 0.7) {
+                      obstacleStartTime = currentTime;
+                      avoidingObstacle = true;
+                  } else if (currentTime > obstacleStartTime + 2.0) {
+                      avoidingObstacle = false;
+                      sendDriveCommand(0.0, 0.0);
+
+                  } else {
+                      sendDriveCommand(80.0, 80.0);
+                  }
+              } else {
+                  sendDriveCommand(-75.0, 75.0);
+              }
+          } else {
+              if (sonarLeftRange < 0.8 || sonarRightRange < 0.8) {
+                  obstacleStartTime = currentTime;
+                  avoidingObstacle = true;
+              } else {
+
+                  humanTime();
+
+                  //update the time used by all the controllers
+                  logicController.SetCurrentTimeInMilliSecs(getROSTimeInMilliSecs());
+
+                  //update center location
+                  logicController.SetCenterLocationOdom(updateCenterLocation());
+
+                  //ask logic controller for the next set of actuator commands
+                  result = logicController.DoWork();
+
+                  bool wait = false;
+
+                  //if a wait behaviour is thrown sit and do nothing untill logicController is ready
+                  if (result.type == behavior) {
+                      if (result.b == wait) {
+//                      wait = true;
+                      }
+                  }
+
+                  //do this when wait behaviour happens
+                  if (wait) {
+                      sendDriveCommand(0.0, 0.0);
+                      std_msgs::Float32 angle;
+
+                      angle.data = prevFinger;
+                      fingerAnglePublish.publish(angle);
+                      angle.data = prevWrist;
+                      wristAnglePublish.publish(angle);
+                  }
+
+                      //normally interpret logic controllers actuator commands and deceminate them over the appropriate ROS topics
+                  else {
+                      if ((result.pd.left == 0) && (result.pd.right == 0)) {
+                          immobileCount++;
+                          if (immobileCount > 30 && immobileCount < 45) {
+                              sendDriveCommand(-60, -30);
+                          }
+                      } else {
+                          sendDriveCommand(result.pd.left, result.pd.right);
+                          immobileCount = 0;
+                      }
+
+
+                      //Alter finger and wrist angle is told to reset with last stored value if currently has -1 value
+                      std_msgs::Float32 angle;
+                      if (result.fingerAngle != -1) {
+                          angle.data = result.fingerAngle;
+                          fingerAnglePublish.publish(angle);
+                          prevFinger = result.fingerAngle;
+                      }
+
+                      if (result.wristAngle != -1) {
+                          angle.data = result.wristAngle;
+                          wristAnglePublish.publish(angle);
+                          prevWrist = result.wristAngle;
+                      }
+                  }
+
+                  //publishHandeling here
+                  //logicController.getPublishData(); suggested
+
+
+                  //adds a blank space between sets of debugging data to easily tell one tick from the next
+                  cout << endl;
+
+              }
+          }
+ROS_INFO_STREAM("backUp = " << backUp);
+ROS_INFO_STREAM("homeTagCount = " << homeTagCount);
+ROS_INFO_STREAM("result.fingerAngle = " << result.fingerAngle);
+ROS_INFO_STREAM("backUpStartTime = " << backUpStartTime);
+}
+
   
   // mode is NOT auto
   else
@@ -471,8 +542,8 @@ void targetHandler(const apriltags_ros::AprilTagDetectionArray::ConstPtr& messag
     }
     
     logicController.SetAprilTags(tags);
+    present_tags = tags;
   }
-  
 }
 
 void modeHandler(const std_msgs::UInt8::ConstPtr& message) {
@@ -489,7 +560,10 @@ void modeHandler(const std_msgs::UInt8::ConstPtr& message) {
 void sonarHandler(const sensor_msgs::Range::ConstPtr& sonarLeft, const sensor_msgs::Range::ConstPtr& sonarCenter, const sensor_msgs::Range::ConstPtr& sonarRight) {
   
   logicController.SetSonarData(sonarLeft->range, sonarCenter->range, sonarRight->range);
-  
+    sonarLeftRange = sonarLeft->range;
+    sonarCenterRange = sonarCenter->range;
+    sonarRightRange = sonarRight->range;
+
 }
 
 void odometryHandler(const nav_msgs::Odometry::ConstPtr& message) {
