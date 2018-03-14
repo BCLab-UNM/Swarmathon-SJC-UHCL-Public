@@ -88,8 +88,8 @@ Result ObstacleController::DoWork() {
     // without hanging around collection zone or obstacle too much.
  //   forward.x = currentLocation.x + (1.2 * cos(currentLocation.theta + 1.20));
  //   forward.y = currentLocation.y + (1.2 * sin(currentLocation.theta + 1.20));
-      forward.x = currentLocation.x + (0.1 * cos(currentLocation.theta + 0.02));
-      forward.y = currentLocation.y + (0.1 * sin(currentLocation.theta + 0.02));
+      forward.x = currentLocation.x + (0.01 * cos(currentLocation.theta + 0.002));
+      forward.y = currentLocation.y + (0.01 * sin(currentLocation.theta + 0.002));
     forward.id = -3; // set unique id to -3
     result.wpts.waypoints.clear();
     result.wpts.waypoints.push_back(forward);

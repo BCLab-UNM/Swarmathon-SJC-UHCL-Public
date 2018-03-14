@@ -109,6 +109,7 @@ Result DropOffController::DoWork() {
         result.type = behavior;
         result.b = nextProcess;
         result.reset = true;
+        result.justDroppedOff = true;
         return result;
       }
       else

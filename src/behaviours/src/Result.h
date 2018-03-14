@@ -83,5 +83,7 @@ struct Result {
   bool waypoint_timeout; // for communication between DriveController and SearchController
   bool is_avoid_obstacle_waypoint; // for communication between DriveController and SearchController
   bool at_boundary = false; // for communication between DriveController and SearchController
+  bool avoidingObstacle = false;
+  bool justDroppedOff = false;
 
 };

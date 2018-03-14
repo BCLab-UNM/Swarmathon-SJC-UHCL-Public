@@ -110,11 +110,11 @@ double currentTime;
 double obstacleStartTime = {99999.0};
 int immobileCount = {0};
 
-bool avoidingObstacle = {false};
 vector<Tag> present_tags;
 int homeTagCount;
 bool backUp = {false};
 double backUpStartTime = {0.0};
+bool sonarLeft, sonarCenter, sonarRight;
 
 float prevWrist = 0;
 float prevFinger = 0;
@@ -329,13 +329,29 @@ void behaviourStateMachine(const ros::TimerEvent&)
           }
       }
 
+      if (sonarLeftRange < 1.01){
+          sonarLeft = true;
+      }else{
+          sonarLeft = false;
+      }
+      if (sonarCenterRange < 1.01){
+          sonarCenter = true;
+      }else{
+          sonarCenter = false;
+      }
+      if (sonarRightRange < 1.01){
+          sonarRight = true;
+      }else{
+          sonarRight = false;
+      }
+
       if (!backUp) {
           if (homeTagCount > 3 && result.fingerAngle > 1.0) {
               backUp = true;
               backUpStartTime = currentTime;
-              avoidingObstacle = false;
+              result.avoidingObstacle = false;
           }else if (homeTagCount > 3 && result.fingerAngle < 0.2) {
-              avoidingObstacle = false;
+              result.avoidingObstacle = false;
           }else{
               backUp = false;
               present_tags.clear();
@@ -343,7 +359,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (backUp) {
-          if (currentTime > backUpStartTime + 2.0) {
+          if (currentTime > backUpStartTime + 15.0) {
               backUp = false;
               sendDriveCommand(-55, 55);
               present_tags.clear();
@@ -351,25 +367,31 @@ void behaviourStateMachine(const ros::TimerEvent&)
               sendDriveCommand(-60, -60);
           }
 
-      }else if (avoidingObstacle) {
-              if (currentTime > obstacleStartTime + 0.75) {
+      }else if (result.avoidingObstacle) {
+              if (currentTime > obstacleStartTime + 0.25) {
                   if (sonarLeftRange < 0.7 || sonarRightRange < 0.7) {
                       obstacleStartTime = currentTime;
-                      avoidingObstacle = true;
-                  } else if (currentTime > obstacleStartTime + 2.0) {
-                      avoidingObstacle = false;
+                      result.avoidingObstacle = true;
+                  } else if (currentTime > obstacleStartTime + 2.25) {
+                      result.avoidingObstacle = false;
                       sendDriveCommand(0.0, 0.0);
 
                   } else {
                       sendDriveCommand(80.0, 80.0);
                   }
               } else {
-                  sendDriveCommand(-75.0, 75.0);
+                  if (sonarRight && !sonarLeft) {
+                      sendDriveCommand(-75.0, 75.0);
+                  }else if (sonarLeft && !sonarRight){
+                      sendDriveCommand(75.0, -75.0);
+                  }else{
+                     sendDriveCommand(-75.0, 75.0);
+                  }
               }
           } else {
               if (sonarLeftRange < 0.8 || sonarRightRange < 0.8) {
                   obstacleStartTime = currentTime;
-                  avoidingObstacle = true;
+                  result.avoidingObstacle = true;
               } else {
 
                   humanTime();
@@ -408,7 +430,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
                       if ((result.pd.left == 0) && (result.pd.right == 0)) {
                           immobileCount++;
                           if (immobileCount > 30 && immobileCount < 45) {
-                              sendDriveCommand(-60, -30);
+                              sendDriveCommand(-30, 30);
                           }
                       } else {
                           sendDriveCommand(result.pd.left, result.pd.right);

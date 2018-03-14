@@ -139,6 +139,11 @@ Result SearchController::DoWork() {
       }
     }
 
+    if (result.justDroppedOff){
+          searchLocation.x = currentLocation.x + (3.0 * cos(currentLocation.theta + 3.14));
+          searchLocation.y = currentLocation.y + (3.0 * sin(currentLocation.theta + 3.14));
+          result.justDroppedOff = false;
+    }
     result.wpts.waypoints.clear();
     result.wpts.waypoints.insert(result.wpts.waypoints.begin(), searchLocation);
     
