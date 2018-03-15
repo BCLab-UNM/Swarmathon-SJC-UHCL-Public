@@ -41,18 +41,18 @@ void ObstacleController::avoidCollectionZone() {
   
     result.type = precisionDriving;
 
-    result.pd.cmdVel = 0.0;
+//    result.pd.cmdVel = 0.0;
 
     // Decide which side of the rover sees the most april tags and turn away
     // from that side
-    if(count_left_collection_zone_tags < count_right_collection_zone_tags) {
-      result.pd.cmdAngular = K_angular;
-    } else {
-      result.pd.cmdAngular = -K_angular;
-    }
+//    if(count_left_collection_zone_tags < count_right_collection_zone_tags) {
+//      result.pd.cmdAngular = K_angular;
+//    } else {
+//      result.pd.cmdAngular = -K_angular;
+//    }
 
     result.pd.setPointVel = 0.0;
-    result.pd.cmdVel = 0.0;
+    result.pd.cmdVel = -1.0;
     result.pd.setPointYaw = 0;
 }
 
