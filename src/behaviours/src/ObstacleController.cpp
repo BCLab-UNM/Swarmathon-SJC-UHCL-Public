@@ -52,13 +52,13 @@ void ObstacleController::avoidCollectionZone() {
 //    }
 
     result.pd.setPointVel = 0.0;
-    result.pd.cmdVel = -1.0;
+    result.pd.cmdVel = -0.1;
     result.pd.setPointYaw = 0;
 }
 
 
 Result ObstacleController::DoWork() {
-  ROS_INFO_STREAM("ObstacleController DoWork=" << current_time);
+//  ROS_INFO_STREAM("ObstacleController DoWork=" << current_time);
 //  ROS_INFO_STREAM_THROTTLE(2,"PickUpController DoWork");
   clearWaypoints = true;
   set_waypoint = true;
@@ -67,11 +67,11 @@ Result ObstacleController::DoWork() {
   // The obstacle is an april tag marking the collection zone
   if(collection_zone_seen){
     avoidCollectionZone();
-    ROS_INFO_STREAM("ObstacleController: See collectionZone");
+//    ROS_INFO_STREAM("ObstacleController: See collectionZone");
   }
   else {
 //    avoidObstacle();
-    ROS_INFO_STREAM("ObstacleController: See obstacle");
+//    ROS_INFO_STREAM("ObstacleController: See obstacle");
   }
 
   //if an obstacle has been avoided

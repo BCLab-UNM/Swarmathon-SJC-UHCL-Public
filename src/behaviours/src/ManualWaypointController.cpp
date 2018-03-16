@@ -29,7 +29,7 @@ bool ManualWaypointController::ShouldInterrupt() {
 }
 
 Result ManualWaypointController::DoWork() {
-  ROS_INFO_STREAM("ManualWayPointController DoWork");
+//  ROS_INFO_STREAM("ManualWayPointController DoWork");
   Result result;
   result.type = waypoint;
   result.wpts.waypoints.push_back(waypoints.begin()->second);

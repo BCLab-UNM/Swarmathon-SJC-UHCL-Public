@@ -29,7 +29,7 @@ void LogicController::Reset() {
 //This function is called every 1/10th second by the ROSAdapter
 //The logical flow if the behaviours is controlled here by using a interrupt, haswork, priority queue system.
 Result LogicController::DoWork() {
-  ROS_INFO_STREAM("LogicController DoWork=" << current_time);
+ // ROS_INFO_STREAM("LogicController DoWork=" << current_time);
   Result result;
 
   //first a loop runs through all the controllers who have a priority of 0 or above witht he largest number being
@@ -44,7 +44,7 @@ Result LogicController::DoWork() {
   }
 
   //logic state switch
-  ROS_INFO_STREAM("LogicState=" << logicState);
+//  ROS_INFO_STREAM("LogicState=" << logicState);
   switch(logicState) {
 
   //when an interrupt has been thorwn or there are no pending control_queue.top().actions logic controller is in this state.
@@ -85,23 +85,23 @@ Result LogicController::DoWork() {
       //ask for an external reset so the state of the controller is preserved untill after it has returned a result and
       //gotten a chance to communicate with other controllers
       if (result.reset) {
-        ROS_INFO_STREAM("LogicController::Resetting. result.reset");
+ //       ROS_INFO_STREAM("LogicController::Resetting. result.reset");
         controllerInterconnect(); //allow controller to communicate state data before it is reset
         control_queue.top().controller->Reset();
-        ROS_INFO_STREAM("0. result.type, result.b=" << result.type << ", " << result.b);
+//        ROS_INFO_STREAM("0. result.type, result.b=" << result.type << ", " << result.b);
       }
 
       //ask for the procces state to change to the next state or loop around to the begining
       if(result.b == nextProcess) {
         if (processState == _LAST - 1) {
-          ROS_INFO_STREAM("processState == _LAST - 1");
+//          ROS_INFO_STREAM("processState == _LAST - 1");
           processState = _FIRST;
         }
         else {
-          ROS_INFO_STREAM("processState != _LAST - 1");
+ //         ROS_INFO_STREAM("processState != _LAST - 1");
           processState = (ProcessState)((int)processState + 1);
         }
-        ROS_INFO_STREAM("1. new processState=" << processState);
+ //       ROS_INFO_STREAM("1. new processState=" << processState);
       }
       //ask for the procces state to change to the previouse state or loop around to the end
       else if(result.b == prevProcess) {
@@ -118,10 +118,10 @@ Result LogicController::DoWork() {
         ProcessData();
         result.b = wait;
         driveController.Reset(); //it is assumed that the drive controller may be in a bad state if interrupted so reset it
-        ROS_INFO_STREAM("2. new processState=" << processState);
+//        ROS_INFO_STREAM("2. new processState=" << processState);
       }
 
-      ROS_INFO_STREAM("3. next processState=" << processState);
+//      ROS_INFO_STREAM("3. next processState=" << processState);
       break;
     }
 
@@ -153,7 +153,7 @@ Result LogicController::DoWork() {
 
     // is_avoid_obstacle_waypoint is set when DriveController finishes obstacle waypoint.
     if (result.is_avoid_obstacle_waypoint) {
-      ROS_INFO_STREAM("LogicController: SetResumePreviousWaypoint=true.");
+//      ROS_INFO_STREAM("LogicController: SetResumePreviousWaypoint=true.");
       // Notify SearchController to restore previous waypoint ID before obstacle.
       searchController.SetResumePreviousWaypoint(true);
     }

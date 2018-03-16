@@ -48,17 +48,17 @@ void SearchController::Reset() {
  * This code implements a basic random walk search.
  */
 Result SearchController::DoWork() {
-  ROS_INFO_STREAM("RangeController DoWork");
+//  ROS_INFO_STREAM("RangeController DoWork");
 //  ROS_INFO_STREAM_THROTTLE(2,"RangeController DoWork");
   if (!result.wpts.waypoints.empty()) {
     if (hypot(result.wpts.waypoints[0].x-currentLocation.x, result.wpts.waypoints[0].y-currentLocation.y) < 0.10) {
       attemptCount = 0;
-      ROS_INFO_STREAM("Completed 1 waypoint.");
+//      ROS_INFO_STREAM("Completed 1 waypoint.");
     }
   }
 
   if (attemptCount > 0 && attemptCount < 1) {
-    ROS_INFO_STREAM("Still working on current waypoint. attempCount =" << attemptCount);
+//    ROS_INFO_STREAM("Still working on current waypoint. attempCount =" << attemptCount);
     attemptCount++;
     if (succesfullPickup) {
       succesfullPickup = false;
@@ -72,7 +72,7 @@ Result SearchController::DoWork() {
   {
     attemptCount = 1;
 
-    ROS_INFO_STREAM("attemptCount >= 5 or == 0. Adding new waypoint..");
+//    ROS_INFO_STREAM("attemptCount >= 5 or == 0. Adding new waypoint..");
 
     result.type = waypoint;
     Point  searchLocation;
@@ -80,7 +80,7 @@ Result SearchController::DoWork() {
     //select new position 50 cm from current location
     if (first_waypoint)
     {
-      ROS_INFO_STREAM("First waypoint aded.");
+//      ROS_INFO_STREAM("First waypoint aded.");
       first_waypoint = false;
       set_spiral_waypoints_odom = true;
       searchLocation.theta = currentLocation.theta + M_PI;
@@ -118,27 +118,28 @@ Result SearchController::DoWork() {
 
         // If rover finishes avoiding obstacle/collection zone, resume previous waypoint
       if (resume_previous_waypoint) { // resume from obstacle avoidance
-        ROS_INFO_STREAM("SearchController:resume from obstacle avoidance.");
+ //       ROS_INFO_STREAM("SearchController:resume from obstacle avoidance.");
         resume_previous_waypoint = false;
         goal_id--; // sets to previous wpt id
       }
 
-      ROS_INFO_STREAM("New waypoint added. goal_id=" << goal_id);
+ //     ROS_INFO_STREAM("New waypoint added. goal_id=" << goal_id);
 
       //select new heading from Gaussian distribution around current heading
       searchLocation.x = centerLocation.x + trajectLocation[goal_id].x;
       searchLocation.y = centerLocation.y + trajectLocation[goal_id].y;
       searchLocation.id = goal_id;
-      ROS_INFO_STREAM("Next waypoint is: " << "x=" << searchLocation.x << ", y=" << searchLocation.y);
+//      ROS_INFO_STREAM("Next waypoint is: " << "x=" << searchLocation.x << ", y=" << searchLocation.y);
 
       goal_id++; // set goal_id to next waypoint
-        ROS_INFO_STREAM("goal_id = " << goal_id);
+//        ROS_INFO_STREAM("goal_id = " << goal_id);
 
       if (goal_id == num_waypoints - 1) { // if 120 waypoints are done, go back to waypoint 11.
         goal_id = 11;
       }
     }
 
+//      ROS_INFO_STREAM("justDroppedOff = " << result.justDroppedOff);
     if (result.justDroppedOff){
           searchLocation.x = currentLocation.x + (3.0 * cos(currentLocation.theta + 3.14));
           searchLocation.y = currentLocation.y + (3.0 * sin(currentLocation.theta + 3.14));

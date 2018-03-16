@@ -359,12 +359,12 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (backUp) {
-          if (currentTime > backUpStartTime + 15.0) {
+          if (currentTime > backUpStartTime + 20.0) {
               backUp = false;
               sendDriveCommand(-55, 55);
               present_tags.clear();
           }else{
-              sendDriveCommand(-60, -60);
+              sendDriveCommand(-30, -30);
           }
 
       }else if (result.avoidingObstacle) {
@@ -430,7 +430,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
                       if ((result.pd.left == 0) && (result.pd.right == 0)) {
                           immobileCount++;
                           if (immobileCount > 30 && immobileCount < 45) {
-                              sendDriveCommand(-30, 30);
+                              sendDriveCommand(30, 30);
                           }
                       } else {
                           sendDriveCommand(result.pd.left, result.pd.right);
@@ -462,10 +462,10 @@ void behaviourStateMachine(const ros::TimerEvent&)
 
               }
           }
-ROS_INFO_STREAM("backUp = " << backUp);
-ROS_INFO_STREAM("homeTagCount = " << homeTagCount);
-ROS_INFO_STREAM("result.fingerAngle = " << result.fingerAngle);
-ROS_INFO_STREAM("backUpStartTime = " << backUpStartTime);
+//ROS_INFO_STREAM("backUp = " << backUp);
+//ROS_INFO_STREAM("homeTagCount = " << homeTagCount);
+//ROS_INFO_STREAM("result.fingerAngle = " << result.fingerAngle);
+//ROS_INFO_STREAM("backUpStartTime = " << backUpStartTime);
 }
 
   

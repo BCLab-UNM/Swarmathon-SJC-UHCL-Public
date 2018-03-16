@@ -28,7 +28,7 @@ void DriveController::Reset()
 
 Result DriveController::DoWork()
 {
-   ROS_INFO_STREAM("DriveController DoWork=" << current_time);
+ //  ROS_INFO_STREAM("DriveController DoWork=" << current_time);
   ///WARNING waypoint input must use FAST_PID at this point in time failure to set fast pid will result in no movment
 
   if(result.type == behavior)
@@ -241,10 +241,10 @@ Result DriveController::DoWork()
 
       // When we finished one waypoint, if this is obstacle waypoint, we want resume previous waypoint.
       if (waypoints.back().id != -3) {
-        ROS_INFO_STREAM("Finished Regular wpt goal!");
+//        ROS_INFO_STREAM("Finished Regular wpt goal!");
         result.is_avoid_obstacle_waypoint = false;
       } else {
-        ROS_INFO_STREAM("Finished Obstacle wpt goal.");
+//        ROS_INFO_STREAM("Finished Obstacle wpt goal.");
         result.is_avoid_obstacle_waypoint = true;
       }
     }
@@ -302,12 +302,12 @@ void DriveController::ProcessData()
     //add waypoints onto stack and change state to start following them
     if (!result.wpts.waypoints.empty()) {
       if (!waypoints.empty() && waypoints.back().id == -3) { // meaning if obstacle waypoint is already added, do not insert any obstacle wpt.
-        ROS_INFO_STREAM("Clear current obstacle wpt. Adding new obstacle waypoint.");
+//        ROS_INFO_STREAM("Clear current obstacle wpt. Adding new obstacle waypoint.");
         waypoints.clear();
         waypoints.insert(waypoints.end(),result.wpts.waypoints.begin(), result.wpts.waypoints.end());
       } else {
         if (result.wpts.waypoints.back().id == -3) {
-          ROS_INFO_STREAM("Obstacle waypoint added.");
+//          ROS_INFO_STREAM("Obstacle waypoint added.");
         }
         waypoints.insert(waypoints.end(),result.wpts.waypoints.begin(), result.wpts.waypoints.end());
       }

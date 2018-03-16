@@ -45,21 +45,21 @@ DropOffController::~DropOffController() {
 
 // Please feel free to tune numerical numbers for better performance.
 Result DropOffController::DoWork() {
-  ROS_INFO_STREAM("DropOffController DoWork=" << current_time);
+//  ROS_INFO_STREAM("DropOffController DoWork=" << current_time);
   cout << "8" << endl;
 
   int count = countLeft + countRight;
 
   // ======== BEGIN: Logic to make rover give up after 1.5min unsuccessful spin search ============
   if (centerSeen && !lostCenter) { // We've found center. Stop time counting, don't drop off
-    ROS_INFO_STREAM_THROTTLE(3, "We found the center. Stop 2 mins time counting. Set startSpinSearchTimer = false..");
+//    ROS_INFO_STREAM_THROTTLE(3, "We found the center. Stop 2 mins time counting. Set startSpinSearchTimer = false..");
     startSpinSearchTimer = false;
     spinSearchStartTime = current_time;
   }
 
 
   if (circularCenterSearching && !centerSeen && !startSpinSearchTimer) { // Start time counting when we start do spin search
-    ROS_INFO_STREAM("Starting Spin Search Time Counting for 2mins...");
+//    ROS_INFO_STREAM("Starting Spin Search Time Counting for 2mins...");
     startSpinSearchTimer = true;
     spinSearchStartTime = current_time;
   }
@@ -69,7 +69,7 @@ Result DropOffController::DoWork() {
     long int elapsed = current_time - spinSearchStartTime;
     float spinSearchTimeElapsed =  elapsed/1e3;
     if (spinSearchTimeElapsed >= 90) {
-      ROS_INFO_STREAM("2mins has passed without seeing center from first spin search. Set startSpinSearchTimer = false. Drop off the cube. Resume normal search..");
+//      ROS_INFO_STREAM("2mins has passed without seeing center from first spin search. Set startSpinSearchTimer = false. Drop off the cube. Resume normal search..");
       // Reset everything
       startSpinSearchTimer = false;
 
@@ -104,12 +104,11 @@ Result DropOffController::DoWork() {
     {
       if (finalInterrupt)
       {
-        ROS_INFO_STREAM("Finished going backwards..");
+//        ROS_INFO_STREAM("Finished going backwards..");
 
         result.type = behavior;
         result.b = nextProcess;
         result.reset = true;
-        result.justDroppedOff = true;
         return result;
       }
       else
@@ -120,7 +119,7 @@ Result DropOffController::DoWork() {
     }
     else if (dropoffTimeElapsed >= 1)
     {
-      ROS_INFO_STREAM("Drop off the cube. Go backwards for 3secs..");
+//      ROS_INFO_STREAM("Drop off the cube. Go backwards for 3secs..");
       isPrecisionDriving = true;
       result.type = precisionDriving;
 
@@ -139,7 +138,7 @@ Result DropOffController::DoWork() {
 
   //check to see if we are driving to the center location or if we need to drive in a circle and look.
   if (!timerStarted && distanceToCenter > collectionPointVisualDistance && !circularCenterSearching && count == 0) {
-    ROS_INFO_STREAM("Moving to center from far distance..., targetHeld=" << targetHeld);
+ //   ROS_INFO_STREAM("Moving to center from far distance..., targetHeld=" << targetHeld);
     result.type = waypoint;
     result.wpts.waypoints.clear();
     result.wpts.waypoints.push_back(this->centerLocation);
@@ -151,7 +150,7 @@ Result DropOffController::DoWork() {
   }
 
   if (count > 0 || centerSeen) {
-    ROS_INFO_STREAM("Oh See Centers now... or Used to see the centers");
+ //   ROS_INFO_STREAM("Oh See Centers now... or Used to see the centers");
     // ROS_INFO_STREAM_THROTTLE(3, "DropOffController: countLeft=" << countLeft << ", countRight=" << countRight << ", count=" << count);
     if (!timerStarted && (centerSeen && count == 0)) { // if we doesn't see any count for 10 secs. Drop the cube ~ give up ~ return to search
       if (!lostCenter) {
@@ -190,7 +189,7 @@ Result DropOffController::DoWork() {
 
     if (!timerStarted && ((countLeft == 0 || countRight == 0) && (count > 0 && count <= 10))) { // we arrived at the edge, either turn left or right
       // ROS_INFO_STREAM("We arrived at the edge, either turn left or right.");
-      ROS_INFO_STREAM("Arrived at the edge. Turn left or right..");
+//      ROS_INFO_STREAM("Arrived at the edge. Turn left or right..");
       if (countLeft > 0) { // TODO: What is result.type, .b here?
         // turn left
         result.pd.cmdVel = 0.07; // rotate but dont drive. 0.05 is to prevent turning in reverse
@@ -224,11 +223,11 @@ Result DropOffController::DoWork() {
       long int elapsed = current_time - timeStart;
       float timeElapsed = elapsed/1e3;
       if (timeElapsed < 3.0) {
-        ROS_INFO_STREAM("Counting to 3secs going straight.");
+//        ROS_INFO_STREAM("Counting to 3secs going straight.");
         result.pd.cmdVel = searchVelocity;
         result.pd.cmdAngularError = 0;
       } else { // 3secs has passed
-        ROS_INFO_STREAM("3secs has passed.. Start dropOffTimer..");
+//        ROS_INFO_STREAM("3secs has passed.. Start dropOffTimer..");
         dropoffTimeStart = current_time;
 
         // ROS_INFO_STREAM("3secs has passed. Now drop off the cube, go backwards 3secs. Return to normal search.");
@@ -249,7 +248,7 @@ Result DropOffController::DoWork() {
   }
 
   if (!centerSeen) { //spin search for center
-    ROS_INFO_STREAM("Spinning Search for centers...");
+//    ROS_INFO_STREAM("Spinning Search for centers...");
 
     Point nextSpinPoint;
     //sets a goal that is 60cm from the centerLocation and spinner
@@ -281,7 +280,7 @@ Result DropOffController::DoWork() {
 }
 
 void DropOffController::Reset() {
-  ROS_INFO_STREAM("DropOffController:: RESETTING...");
+//  ROS_INFO_STREAM("DropOffController:: RESETTING...");
   result.type = behavior;
 //  result.b = wait; // Commented to ensure rover will go to next process state.
   result.pd.cmdVel = 0;
