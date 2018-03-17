@@ -222,9 +222,9 @@ Result DropOffController::DoWork() {
     if (timerStarted) {
       long int elapsed = current_time - timeStart;
       float timeElapsed = elapsed/1e3;
-      if (timeElapsed < 3.0) {
+      if (timeElapsed < 2.0) {
 //        ROS_INFO_STREAM("Counting to 3secs going straight.");
-        result.pd.cmdVel = 0.05;
+        result.pd.cmdVel = 0.15;
         result.pd.cmdAngularError = 0;
       } else { // 3secs has passed
 //        ROS_INFO_STREAM("3secs has passed.. Start dropOffTimer..");

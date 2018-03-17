@@ -350,11 +350,11 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (!backUp) {
-          if (homeTagCount > 3 && result.fingerAngle > 1.0) {
+          if (homeTagCount > 1 && result.fingerAngle > 1.0) {
               backUp = true;
               backUpStartTime = currentTime;
               result.avoidingObstacle = false;
-          }else if (homeTagCount > 3 && result.fingerAngle < 0.2) {
+          }else if (homeTagCount > 1 && result.fingerAngle < 0.2) {
               result.avoidingObstacle = false;
           }else{
               backUp = false;
@@ -385,11 +385,11 @@ void behaviourStateMachine(const ros::TimerEvent&)
                   }
               } else {
                   if (sonarRight && !sonarLeft) {
-                      sendDriveCommand(-75.0, 75.0);
+                      sendDriveCommand(-70.0, 80.0);
                   }else if (sonarLeft && !sonarRight){
-                      sendDriveCommand(75.0, -75.0);
+                      sendDriveCommand(80.0, -70.0);
                   }else{
-                     sendDriveCommand(-75.0, 75.0);
+                     sendDriveCommand(-70.0, 80.0);
                   }
               }
           } else {
