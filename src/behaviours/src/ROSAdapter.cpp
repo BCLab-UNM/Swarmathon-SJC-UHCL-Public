@@ -433,8 +433,8 @@ void behaviourStateMachine(const ros::TimerEvent&)
                   else {
                       if ((result.pd.left == 0) && (result.pd.right == 0)) {
                           immobileCount++;
-                          if (immobileCount > 30 && immobileCount < 45) {
-                              sendDriveCommand(30, 30);
+                          if (immobileCount > 30 && immobileCount < 60) {
+                              sendDriveCommand(-30, -30);
                           }
                       } else {
                           sendDriveCommand(result.pd.left, result.pd.right);
