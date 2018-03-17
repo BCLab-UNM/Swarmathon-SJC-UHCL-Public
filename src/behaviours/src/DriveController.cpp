@@ -115,7 +115,7 @@ Result DriveController::DoWork()
         result.waypoint_timeout = true; // To signal SearchController to reset goal_id back to default one.
         interupt = true;
         return result;
-    } else if (waypoints.back().id > 90){
+    } else if (waypoints.back().id > 105){
         waypoints.pop_back();
         stateMachineState = STATE_MACHINE_WAITING;
         result.type = behavior;

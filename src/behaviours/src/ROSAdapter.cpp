@@ -111,7 +111,7 @@ double obstacleStartTime = {99999.0};
 int immobileCount = {0};
 
 vector<Tag> present_tags;
-int homeTagCount;
+int homeTagCount, targetTagCount;
 bool backUp = {false};
 double backUpStartTime = {0.0};
 bool sonarLeft, sonarCenter, sonarRight;
@@ -323,9 +323,13 @@ void behaviourStateMachine(const ros::TimerEvent&)
   if (currentMode == 2 || currentMode == 3) {
       currentTime  = ros::Time::now().toSec();
       homeTagCount = 0;
+      targetTagCount = 0;
       for (int i = 0; i < present_tags.size(); i++) {
           if (present_tags[i].getID() == 256) {
               homeTagCount++;
+          }
+          if (present_tags[i].getID() == 0) {
+              targetTagCount++;
           }
       }
 
