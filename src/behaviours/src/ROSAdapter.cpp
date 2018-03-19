@@ -350,11 +350,11 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (!backUp) {
-          if (homeTagCount > 1 && result.fingerAngle > 1.0) {
+          if (homeTagCount >= 2 && result.fingerAngle > 1.0) {
               backUp = true;
               backUpStartTime = currentTime;
               result.avoidingObstacle = false;
-          }else if (homeTagCount > 1 && result.fingerAngle < 0.2) {
+          }else if (homeTagCount >= 2 && result.fingerAngle < 0.2) {
               result.avoidingObstacle = false;
           }else{
               backUp = false;
@@ -363,16 +363,17 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (backUp) {
-          if (currentTime > backUpStartTime + 20.0) {
+          if (currentTime > backUpStartTime + 10.0) {
               backUp = false;
-              sendDriveCommand(-55, 55);
               present_tags.clear();
+          }else if (currentTime > backUpStartTime + 4.0){
+              sendDriveCommand(-53, 58);
           }else{
               sendDriveCommand(-30, -30);
           }
 
       }else if (result.avoidingObstacle) {
-              if (currentTime > obstacleStartTime + 0.25) {
+              if (currentTime > obstacleStartTime + 0.5) {
                   if (sonarLeftRange < 0.7 || sonarRightRange < 0.7) {
                       obstacleStartTime = currentTime;
                       result.avoidingObstacle = true;
@@ -414,7 +415,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
                   //if a wait behaviour is thrown sit and do nothing untill logicController is ready
                   if (result.type == behavior) {
                       if (result.b == wait) {
-//                      wait = true;
+                      wait = true;
                       }
                   }
 
@@ -434,7 +435,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
                       if ((result.pd.left == 0) && (result.pd.right == 0)) {
                           immobileCount++;
                           if (immobileCount > 30 && immobileCount < 60) {
-                              sendDriveCommand(-30, -30);
+                              sendDriveCommand(-30, 30);
                           }
                       } else {
                           sendDriveCommand(result.pd.left, result.pd.right);

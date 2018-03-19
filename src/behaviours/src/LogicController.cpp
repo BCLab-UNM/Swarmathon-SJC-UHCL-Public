@@ -209,7 +209,6 @@ Result LogicController::DoWork() {
 
   //now using proccess logic allow the controller to communicate data between eachother
   controllerInterconnect();
-
   //give the ROSAdapter the final decision on how it should drive
   return result;
 }

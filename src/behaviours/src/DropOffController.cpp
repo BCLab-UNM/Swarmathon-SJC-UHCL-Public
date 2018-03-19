@@ -222,7 +222,7 @@ Result DropOffController::DoWork() {
     if (timerStarted) {
       long int elapsed = current_time - timeStart;
       float timeElapsed = elapsed/1e3;
-      if (timeElapsed < 2.0) {
+      if (timeElapsed < 2.5) {
 //        ROS_INFO_STREAM("Counting to 3secs going straight.");
         result.pd.cmdVel = 0.15;
         result.pd.cmdAngularError = 0;
@@ -256,7 +256,9 @@ Result DropOffController::DoWork() {
     nextSpinPoint.x = centerLocation.x + (initialSpinSize + spinSizeIncrease) * cos(spinner);
     nextSpinPoint.y = centerLocation.y + (initialSpinSize + spinSizeIncrease) * sin(spinner);
     nextSpinPoint.theta = atan2(nextSpinPoint.y - currentLocation.y, nextSpinPoint.x - currentLocation.x);
-    nextSpinPoint.id = rand(); // To avoid 60s timeout timer which can cause rover incorrectly considered as being stuck
+    //nextSpinPoint.id = rand(); // To avoid 60s timeout timer which can cause rover incorrectly considered as being stuck
+
+    nextSpinPoint.id = rand() % 6 - 15;
 
     result.type = waypoint; // this will forward control to DriveController
     result.wpts.waypoints.clear();
