@@ -109,6 +109,7 @@ float sonarRightRange;
 double currentTime;
 double obstacleStartTime = {99999.0};
 int immobileCount = {0};
+bool outside = {true};
 
 vector<Tag> present_tags;
 int homeTagCount, targetTagCount;
@@ -327,6 +328,10 @@ void behaviourStateMachine(const ros::TimerEvent&)
       for (int i = 0; i < present_tags.size(); i++) {
           if (present_tags[i].getID() == 256) {
               homeTagCount++;
+              if (present_tags[i].calcYaw()>0) {outside = true;
+              }else{
+                  outside = false;
+              }
           }
           if (present_tags[i].getID() == 0) {
               targetTagCount++;
@@ -350,7 +355,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (!backUp) {
-          if (homeTagCount >= 2 && result.fingerAngle > 1.0) {
+          if (homeTagCount >= 2 && result.fingerAngle > 1.0 && outside) {
               backUp = true;
               backUpStartTime = currentTime;
               result.avoidingObstacle = false;
@@ -363,11 +368,11 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (backUp) {
-          if (currentTime > backUpStartTime + 10.0) {
+          if (currentTime > backUpStartTime + 8.0) {
               backUp = false;
               present_tags.clear();
           }else if (currentTime > backUpStartTime + 4.0){
-              sendDriveCommand(-53, 58);
+              sendDriveCommand(-70, 80);
           }else{
               sendDriveCommand(-30, -30);
           }
