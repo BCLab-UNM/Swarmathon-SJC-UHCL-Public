@@ -368,7 +368,7 @@ void behaviourStateMachine(const ros::TimerEvent&)
       }
 
       if (backUp) {
-          if (currentTime > backUpStartTime + 8.0) {
+          if (currentTime > backUpStartTime + 7.2) {
               backUp = false;
               present_tags.clear();
           }else if (currentTime > backUpStartTime + 4.0){
